@@ -1,0 +1,20 @@
+{
+  "name": "picos-mod-mysql",
+  "version": "0.1.0",
+  "description": "mysql module for picos",
+  "main": "index.js",
+  "scripts": {
+    "test": "node test.js"
+  },
+  "keywords": [
+    "picos",
+    "mysql",
+    "module"
+  ],
+  "author": "Darren Liew",
+  "license": "MIT",
+  "dependencies": {
+    "mysql": "^2.13.0",
+    "pico-args": "^1.0.8"
+  }
+}
