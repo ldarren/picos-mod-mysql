@@ -1,6 +1,6 @@
 {
   "name": "picos-mod-mysql",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "mysql module for picos",
   "main": "index.js",
   "scripts": {
@@ -14,7 +14,10 @@
   "author": "Darren Liew",
   "license": "MIT",
   "dependencies": {
-    "mysql": "^2.13.0",
-    "pico-args": "^1.0.8"
+    "mysql": "^2.15.0",
+    "pico-args": "*"
+  },
+  "devDependencies": {
+    "pico-common": "*"
   }
 }

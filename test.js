@@ -1,7 +1,6 @@
-const
-pico=require('pico-common/pico-cli'),
-ensure= pico.export('pico/test').ensure,
-mysql=require('./index')
+const pico = require('pico-common/bin/pico-cli')
+const { ensure } = pico.export('pico/test')
+const mysql = require('./index')
 
 let client
 
@@ -9,9 +8,9 @@ ensure('ensure mysql loaded', function(cb){
 	cb(null, !!mysql)
 })
 ensure('ensure mysql create', function(cb){
-	mysql.create({path:'',env:'pro'},{},(err, cli)=>{
+	mysql.create({ path: '', env: 'pro' }, {}, (err, cli) => {
 		if (err) return cb(err)
-		client=cli
+		client = cli
 		cb(null, !!client)
 	})
 })

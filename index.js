@@ -1,40 +1,40 @@
 //TODO: use pool or clusterPool to prevent connection error?
-const
-mysql = require('mysql'),
-args= require('pico-args'),
-makeConn = function(client){
-    const cfg = client.config
+const mysql = require('mysql')
+const args= require('pico-args')
+
+function makeConn(client){
+	const cfg = client.config
 	if (!cfg.database || !cfg.user || !cfg.password) return console.error('invalid cfg [%s]',JSON.stringify(cfg))
-    const conn = mysql.createConnection(cfg)
-    conn.on('error', function(err){
-        console.error('mysql conn error', err)
-        if ('PROTOCOL_CONNECTION_LOST' === err.code){
-            setImmediate(function(){ makeConn(client) })
-        }
-    })
-    conn.connect(function(err){
-        if (err) {
-            setImmediate(function(){ makeConn(client) })
+	const conn = mysql.createConnection(cfg)
+	conn.on('error', err => {
+		console.error('mysql conn error', err)
+		if ('PROTOCOL_CONNECTION_LOST' === err.code){
+			setImmediate(makeConn, client)
+		}
+	})
+	conn.connect(err => {
+		if (err) {
+			setImmediate(makeConn, client)
 			return console.error('mysql conn[%s:%d.%s] error[%s]',cfg.host,cfg.port,cfg.database,err)
-        }
-        console.log('mysql conn[%s:%d.%s] connected',cfg.host,cfg.port,cfg.database)
-        //conn.query('SET NAMES utf8');
-    })
-    return client.conn = conn
-},
-Client=function(config, conn){
-    this.config=config
-    this.conn=conn
-    makeConn(this)
+		}
+		console.log('mysql conn[%s:%d.%s] connected',cfg.host,cfg.port,cfg.database)
+		//conn.query('SET NAMES utf8');
+	})
+	return client.conn = conn
+}
+
+function Client(config, conn){
+	this.config = config
+	this.conn = conn || makeConn(this)
 }
 
 Client.prototype={
-    query(){
-        return this.conn.query(...arguments)
-    },
-    format(){
-        return mysql.format(...arguments)
-    },
+	query(){
+		return this.conn.query(...arguments)
+	},
+	format(){
+		return mysql.format(...arguments)
+	},
 	decode(obj,hash,ENUM){
 		const keys=Object.keys(obj)
 		for(let i=0,k; k=keys[i]; i++) {
@@ -51,11 +51,11 @@ Client.prototype={
 	},
 	encode(obj,by,hash,INDEX,ENUM){
 		const arr=[]
-        for(let i=0,k; k=INDEX[i]; i++){ 
+		for(let i=0,k; k=INDEX[i]; i++){ 
 			if (-1===ENUM.indexOf(k)) arr.push(obj[k])
 			else arr.push(hash.val(obj[k]))
 		}
-        arr.push(by)
+		arr.push(by)
 		return arr
 	},
 	mapDecode(rows=[], output={}, hash, ENUM, key='id'){
@@ -68,12 +68,12 @@ Client.prototype={
 		}
 		return output
 	},
-    mapDecodes(rows=[], outputs=[], hash, ENUM, key='id'){
-        for(let i=0,o; o=outputs[i]; i++){
-            this.mapDecode(rows, o, hash, ENUM, key)
-        }
-        return outputs
-    },
+	mapDecodes(rows=[], outputs=[], hash, ENUM, key='id'){
+		for(let i=0,o; o=outputs[i]; i++){
+			this.mapDecode(rows, o, hash, ENUM, key)
+		}
+		return outputs
+	},
 	mapEncode(obj, by, hash, INDEX, ENUM){
 		const
 		id=obj.id,
@@ -156,7 +156,7 @@ module.exports={
             database:null
         }
 
-        args.print('MySQL Options',Object.assign(config,libConfig))
+        args.print('MySQL Options', Object.assign(config, libConfig))
         return next(null, new Client(config))
     }
 }
