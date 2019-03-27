@@ -1,34 +1,53 @@
-//TODO: use pool or clusterPool to prevent connection error?
 const mysql = require('mysql')
 const args= require('pico-args')
 
-function makeConn(client){
-	const cfg = client.config
-	if (!cfg.database || !cfg.user || !cfg.password) return console.error('invalid cfg [%s]',JSON.stringify(cfg))
-	const conn = mysql.createConnection(cfg)
-	conn.on('error', err => {
-		console.error('mysql conn error', err)
-		if ('PROTOCOL_CONNECTION_LOST' === err.code){
-			setImmediate(makeConn, client)
-		}
-	})
-	conn.connect(err => {
-		if (err) {
-			setImmediate(makeConn, client)
-			return console.error('mysql conn[%s:%d.%s] error[%s]',cfg.host,cfg.port,cfg.database,err)
-		}
-		console.log('mysql conn[%s:%d.%s] connected',cfg.host,cfg.port,cfg.database)
-		//conn.query('SET NAMES utf8');
-	})
-	return client.conn = conn
+function listen(key, pool){
+	pool.acquire = (conn) => {
+		console.log(k, 'acquired', conn.threadId)
+	}
+	pool.connection = (conn) => {
+		console.log(k, 'connected', conn.threadId)
+	}
+	pool.enqueue = (conn) => {
+		console.log(k, 'enqueueing')
+	}
+	pool.release = (conn) => {
+		console.log(k, 'released', conn.threadId)
+	}
 }
 
-function Client(config, conn){
-	this.config = config
-	this.conn = conn || makeConn(this)
+function onRemove(nodeId){
+	console.log('REMOVED NODE : ' + nodeId);
 }
 
-Client.prototype={
+function Query(op, tname, pname = '*'){
+	this.op = op
+	this.tname = tname
+	this.pname = pname
+}
+
+Query.prototype = {
+}
+
+function Client(clusterCfg, poolCfgs){
+	const cluster = mysql.createPoolCluster(clusterCfg)
+	Object.keys(poolCfgs).reduce((acc, k) => {
+		acc.add(k, poolCfgs[k])
+		listen(k, acc.of(k))
+		return acc
+	}, cluster)
+	cluster.on('remove', onRemove)
+
+	this.cluster = cluster
+}
+
+Client.prototype = {
+	bye(cb){
+		this.cluster.end(cb)
+	},
+	select(tname, pname){
+		return new Query('select', tname, pname)
+	},
 	query(){
 		return this.conn.query(...arguments)
 	},
@@ -147,16 +166,39 @@ Client.prototype={
 }
 
 module.exports={
-    create(appConfig, libConfig, next){
-        const config={
-            host:'localhost',
-            port:3306,
-            user:null,
-            password:null,
-            database:null
+	create(appConfig, libConfig, next){
+        const clusterCfg = {
+			canRetry: true,
+			removeNodeErrorCount: 5,
+			restoreNodeTimeout: 0,
+			defaultSelector: 'RR'
+        }
+        const poolCfg = {
+            host: 'localhost',
+            port: 3306,
+            user: null,
+            password: null,
+            database: null,
+			connectionLimit: 2,
+			acquireTimeout: 1000,
+			waitForConnections: true,
+			connectionLimit: 1,
+			queueLimit: 0
         }
 
-        args.print('MySQL Options', Object.assign(config, libConfig))
-        return next(null, new Client(config))
-    }
+		Object.assign(clusterCfg, libConfig.cluster || {})
+		args.print('MySQL Cluster Options', clusterCfg)
+
+		const configs = Object.keys(libConfig).reduce((acc, k) => {
+			let c
+			if ('cluster' !== k) {
+				const c = Object.assign({}, poolCfg, libConfig[k])
+				args.print(`MySQL ${k} Options`, c)
+				acc[k] = c
+			}
+			return acc
+		}, {})
+
+        return next(null, new Client(clusterCfg, configs))
+	}
 }
