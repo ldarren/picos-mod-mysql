@@ -119,17 +119,24 @@ function listEncode(id, key, list, by, hash, INDEX, ENUM){
 	return arr
 }
 
+function extract(obj, values){
+	const keys = Object.keys(obj)
+	values.push(...keys.map(k => obj[k]))
+	const conds = keys.map(k => `${k} = ?`)
+	return conds.join(' and ')
+}
+
 function listen(key, pool){
-	pool.acquire = (conn) => {
+	pool.acquire = conn => {
 		console.log(key, 'acquired', conn.threadId)
 	}
-	pool.connection = (conn) => {
+	pool.connection = conn => {
 		console.log(key, 'connected', conn.threadId)
 	}
-	pool.enqueue = (conn) => {
+	pool.enqueue = () => {
 		console.log(key, 'enqueueing')
 	}
-	pool.release = (conn) => {
+	pool.release = conn => {
 		console.log(key, 'released', conn.threadId)
 	}
 }
@@ -177,9 +184,11 @@ QueryBuilder.prototype = {
 	},
 	from(tname){
 		this.tname = tname
+		return this
 	},
 	where(cond){
 		this.cond = cond
+		return this
 	},
 	validate(){
 		if (!this.pname || !this.tname) return 'missing table name'
@@ -201,8 +210,10 @@ QueryBuilder.prototype = {
 	toSQL(cb){
 		const err = this.validate()
 		if (err) return cb(err)
-		const sql = this.op + ' ' + this.select.join(',') + ' ' + this.tname + ' ' + this.cond.toString + ';'
-		return cb(err, sql)
+		const params = []
+		const conds = extract(this.cond, params)
+		const sql = this.op + ' ' + this.select.join(',') + ' from ' + this.tname + ' where ' + conds + ';'
+		return cb(err, sql, params)
 	},
 	exec(cb){
 		this.toSQL((err, sql) => {
