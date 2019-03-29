@@ -39,7 +39,6 @@ test('test select query builder', cb => {
 
 test('test select query', cb => {
 	client.query().select().from('user').where({id: 3, state: 1}).exec((err, result) => {
-	console.log(err, result)
 		if (err) return cb(err)
 		cb(null, true)
 	})
