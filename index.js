@@ -145,7 +145,8 @@ function onRemove(nodeId){
 	console.log('REMOVED NODE : ' + nodeId)
 }
 
-function QueryBuilder(tname, pname){
+function QueryBuilder(cluster, tname, pname){
+	this.cluster = cluster
 	this.tname = tname
 	this.pname = pname
 }
@@ -216,11 +217,11 @@ QueryBuilder.prototype = {
 		return cb(err, sql, params)
 	},
 	exec(cb){
-		this.toSQL((err, sql) => {
+		this.toSQL((err, sql, params) => {
 			if (err) return cb(err)
 			const pool = this.cluster.of(this.pname)
 			if (!pool) return cb(`invalid pool name ${this.pname}`)
-			pool.query(sql, cb)
+			pool.query(sql, params, cb)
 		})
 	}
 }
@@ -242,7 +243,7 @@ Client.prototype = {
 		this.cluster.end(cb)
 	},
 	query(tname, pname){
-		return new QueryBuilder(tname, pname)
+		return new QueryBuilder(this.cluster, tname, pname)
 	}
 }
 
