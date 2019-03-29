@@ -2,20 +2,8 @@ const pico = require('pico-common/bin/pico-cli')
 const { test } = pico.export('pico/test')
 const mysql = require('./index')
 
-const appConfig = { path: '', env: 'pro' }
-const libConfig = {
-	master: {
-		host: 'db4free.net',
-		port: 3306,
-		user: 'picos_tester',
-		password: '',
-		database: 'picos_test',
-		acquireTimeout: 120000,
-		waitForConnections: true,
-		connectionLimit: 1,
-		queueLimit: 1
-	}
-}
+const appConfig = { ath: '', env: 'pro' }
+const libConfig = require('./env.json')
 let client
 
 test('ensure mysql loaded', cb => {
