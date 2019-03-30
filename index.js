@@ -187,7 +187,7 @@ QueryBuilder.prototype = {
 	insert(fields){
 		this.op = 'insert'
 		if (!this.pname) this.pname = 'master'
-	
+
 		this.fields = fields
 		return this
 	},
