@@ -119,11 +119,24 @@ function listEncode(id, key, list, by, hash, INDEX, ENUM){
 	return arr
 }
 
-function extract(obj, values){
-	const keys = Object.keys(obj)
-	values.push(...keys.map(k => obj[k]))
-	const conds = keys.map(k => `${k} = ?`)
-	return conds.join(' and ')
+function extract(conds, params, joint){
+	let str = ''
+	if (!conds.length) return str
+	const cond = conds.shift()
+	if (cond.charAt) return ' ' + cond + ' ' + extract(conds, params, cond)
+	if (Array.isArray(cond[0])) return '(' + extract(cond, params, 'and') + ')'
+	if (conds[0] && !conds[0].charAt) conds.unshift(joint)
+
+	str += cond[0] + ' ' + cond[1] + ' '
+	if ('in' === cond[1]){
+		params.push(cond[2])
+		str += '(?)'
+	} else {
+		str += '?'
+		params.push(cond[2])
+	}
+
+	return str + extract(conds, params, joint)
 }
 
 function listen(key, pool){
@@ -149,46 +162,81 @@ function QueryBuilder(cluster, tname, pname){
 	this.cluster = cluster
 	this.tname = tname
 	this.pname = pname
+	this.cond = []
 }
 
 QueryBuilder.prototype = {
 	select(){
 		this.op = 'select'
 		if (!this.pname) this.pname = '*'
+
 		if (arguments.length) {
 			if (1 === arguments.length){
 				const arg = arguments[0]
-				if (Array.isArray(arg)) this.select = arg
-				else if (arg.charAt) this.select = [arg]
+				if (Array.isArray(arg)) this.ret = arg
+				else if (arg.charAt) this.ret = [arg]
 			}else{
-				this.select = Array.from(arguments)
+				this.ret = Array.from(arguments)
 			}
 		}else{
-			this.select = ['*']
+			this.ret = ['*']
 		}
+
 		return this
 	},
 	insert(){
 		this.op = 'insert'
 		if (!this.pname) this.pname = 'master'
+
 		return this
 	},
 	update(){
 		this.op = 'update'
 		if (!this.pname) this.pname = 'master'
+
 		return this
 	},
 	delete(){
 		this.op = 'delete'
 		if (!this.pname) this.pname = 'master'
+
 		return this
 	},
 	from(tname){
 		this.tname = tname
 		return this
 	},
-	where(cond){
-		this.cond = cond
+	where(){
+		const arg0 = arguments[0]
+
+		switch(arguments.length){
+		case 1:
+			if (Array.isArray(arg0)){
+				this.cond.push(...arg0)
+				break
+			}
+			Object.keys(arg0).reduce((cond, k) => {
+				cond.push([k, '=', arg0[k]])
+				return cond
+			}, this.cond)
+			break
+		case 2:
+			this.cond.push([arg0, '=', arguments[1]])
+			break
+		case 3:
+			this.cond.push([arg0, arguments[1], arguments[2]])
+			break
+		}
+		return this
+	},
+	and(join){
+		this.cond.push('and')
+		if (join) this.cond.push(join(new QueryBuilder()).cond)
+		return this
+	},
+	or(join){
+		this.cond.push('or')
+		if (join) this.cond.push(join(new QueryBuilder()).cond)
 		return this
 	},
 	validate(){
@@ -196,7 +244,7 @@ QueryBuilder.prototype = {
 
 		switch(this.op){
 		case 'select':
-			if (!this.select || !this.cond) return 'missing select or condition'
+			if (!this.ret || !Array.isArray(this.cond) || !this.cond.length) return 'missing select or condition'
 			return
 		case 'insert':
 			return
@@ -211,9 +259,18 @@ QueryBuilder.prototype = {
 	toSQL(cb){
 		const err = this.validate()
 		if (err) return cb(err)
+
 		const params = []
-		const conds = extract(this.cond, params)
-		const sql = this.op + ' ' + this.select.join(',') + ' from ' + this.tname + ' where ' + conds + ';'
+		let conds
+		let sql
+		switch(this.op){
+		case 'select':
+			conds = extract(this.cond, params, 'and')
+			sql = this.op + ' ' + this.ret.join(',') + ' from ' + this.tname + ' where ' + conds + ';'
+			break
+		default:
+			return cb('coming soon')
+		}
 		return cb(err, sql, params)
 	},
 	exec(cb){
