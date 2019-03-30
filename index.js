@@ -128,7 +128,7 @@ function extract(conds, params, joint){
 	if (conds[0] && !conds[0].charAt) conds.unshift(joint)
 
 	str += cond[0] + ' ' + cond[1] + ' '
-	if ('in' === cond[1]){
+	if (Array.isArray(cond[2])){
 		params.push(cond[2])
 		str += '(?)'
 	} else {
@@ -174,7 +174,7 @@ QueryBuilder.prototype = {
 			if (1 === arguments.length){
 				const arg = arguments[0]
 				if (Array.isArray(arg)) this.ret = arg
-				else if (arg.charAt) this.ret = [arg]
+				else this.ret = [arg]
 			}else{
 				this.ret = Array.from(arguments)
 			}
@@ -184,7 +184,7 @@ QueryBuilder.prototype = {
 
 		return this
 	},
-	insert(){
+	insert(data){
 		this.op = 'insert'
 		if (!this.pname) this.pname = 'master'
 
@@ -240,17 +240,20 @@ QueryBuilder.prototype = {
 		return this
 	},
 	validate(){
-		if (!this.pname || !this.tname) return 'missing table name'
+		if (!this.pname) return 'missing pool name'
 
 		switch(this.op){
 		case 'select':
-			if (!this.ret || !Array.isArray(this.cond) || !this.cond.length) return 'missing select or condition'
+			if (!this.ret || !Array.isArray(this.cond)) return 'missing return or conditions'
 			return
 		case 'insert':
+			if (!this.tname) return 'missing table name'
 			return
 		case 'update':
+			if (!this.tname) return 'missing table name'
 			return
 		case 'delete':
+			if (!this.tname) return 'missing table name'
 			return
 		default:
 			return `unknown operation ${this.op}`
@@ -265,8 +268,13 @@ QueryBuilder.prototype = {
 		let sql
 		switch(this.op){
 		case 'select':
-			conds = extract(this.cond, params, 'and')
-			sql = this.op + ' ' + this.ret.join(',') + ' from ' + this.tname + ' where ' + conds + ';'
+			sql = this.op + ' ' + this.ret.join(',')
+			if (this.tname) sql += ' from ' + this.tname
+			if (this.cond.length){
+				conds = extract(this.cond, params, 'and')
+				sql += ' where ' + conds
+			}
+			sql += ';'
 			break
 		default:
 			return cb('coming soon')
@@ -299,7 +307,7 @@ Client.prototype = {
 	bye(cb){
 		this.cluster.end(cb)
 	},
-	query(tname, pname){
+	q(tname, pname){
 		return new QueryBuilder(this.cluster, tname, pname)
 	}
 }

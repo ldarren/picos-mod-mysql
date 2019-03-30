@@ -19,37 +19,36 @@ test('ensure mysql create', cb => {
 })
 
 test('test select query builder', cb => {
-	client.query().select().from('user').where({id: 3, state: 1}).toSQL((err, sql, params) => {
+	client.q().select(1).toSQL((err, sql, params) => {
 		if (err) return cb(err)
 		cb(null, 
-			'select * from user where id = ? and state = ?;' === sql && 
-			params.length === 2 &&
-			params[0] === 3 && 
-			params[1] === 1)
+			'select 1;' === sql && 
+			params.length === 0)
 	})
 })
 
 test('test select query builder with bracket', cb => {
-	client.query()
+	client.q()
 	.select()
 	.from('user')
-	.where({id: 3})
+	.where({id: 3, state: 1})
 	.or(q => {
 		return q.where('name','foo').where('age', '>', 56)
 	})
 	.toSQL((err, sql, params) => {
 		if (err) return cb(err)
 		cb(null, 
-			'select * from user where id = ? or (name = ? and age > ?);' === sql && 
-			params.length === 3 &&
+			'select * from user where id = ? and state = ? or (name = ? and age > ?);' === sql && 
+			params.length === 4 &&
 			params[0] === 3 && 
-			params[1] === 'foo' &&
-			params[2] === 56)
+			params[1] === 1 && 
+			params[2] === 'foo' &&
+			params[3] === 56)
 	})
 })
 
 test('test select query builder where in', cb => {
-	client.query()
+	client.q()
 	.select()
 	.from('user')
 	.where({id: 3})
@@ -71,7 +70,7 @@ test('test select query builder where in', cb => {
 })
 /*
 test('test select query', cb => {
-	client.query().select().from('user').where({id: 3, state: 1}).exec((err, result) => {
+	client.q().select().from('user').where({id: 3, state: 1}).exec((err, result) => {
 		if (err) return cb(err)
 		cb(null, true)
 	})
