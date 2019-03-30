@@ -119,12 +119,12 @@ function listEncode(id, key, list, by, hash, INDEX, ENUM){
 	return arr
 }
 
-function extract(conds, params, joint){
+function extractConditions(conds, params, joint){
 	let str = ''
 	if (!conds.length) return str
 	const cond = conds.shift()
-	if (cond.charAt) return ' ' + cond + ' ' + extract(conds, params, cond)
-	if (Array.isArray(cond[0])) return '(' + extract(cond, params, 'and') + ')'
+	if (cond.charAt) return ' ' + cond + ' ' + extractConditions(conds, params, cond)
+	if (Array.isArray(cond[0])) return '(' + extractConditions(cond, params, 'and') + ')'
 	if (conds[0] && !conds[0].charAt) conds.unshift(joint)
 
 	str += cond[0] + ' ' + cond[1] + ' '
@@ -136,7 +136,7 @@ function extract(conds, params, joint){
 		params.push(cond[2])
 	}
 
-	return str + extract(conds, params, joint)
+	return str + extractConditions(conds, params, joint)
 }
 
 function listen(key, pool){
@@ -184,10 +184,11 @@ QueryBuilder.prototype = {
 
 		return this
 	},
-	insert(data){
+	insert(fields){
 		this.op = 'insert'
 		if (!this.pname) this.pname = 'master'
-
+	
+		this.fields = fields
 		return this
 	},
 	update(){
@@ -203,6 +204,10 @@ QueryBuilder.prototype = {
 		return this
 	},
 	from(tname){
+		this.tname = tname
+		return this
+	},
+	into(tname){
 		this.tname = tname
 		return this
 	},
@@ -239,6 +244,10 @@ QueryBuilder.prototype = {
 		if (join) this.cond.push(join(new QueryBuilder()).cond)
 		return this
 	},
+	values(data){
+		this.values = data
+		return this
+	},
 	validate(){
 		if (!this.pname) return 'missing pool name'
 
@@ -247,7 +256,7 @@ QueryBuilder.prototype = {
 			if (!this.ret || !Array.isArray(this.cond)) return 'missing return or conditions'
 			return
 		case 'insert':
-			if (!this.tname) return 'missing table name'
+			if (!this.tname || !this.fields || !this.values) return 'missing table name or fields or values'
 			return
 		case 'update':
 			if (!this.tname) return 'missing table name'
@@ -263,22 +272,26 @@ QueryBuilder.prototype = {
 		const err = this.validate()
 		if (err) return cb(err)
 
-		const params = []
+		let params = []
 		let conds
-		let sql
+		let sql = this.op
 		switch(this.op){
 		case 'select':
-			sql = this.op + ' ' + this.ret.join(',')
+			sql += ' ' + this.ret.join(',')
 			if (this.tname) sql += ' from ' + this.tname
 			if (this.cond.length){
-				conds = extract(this.cond, params, 'and')
+				conds = extractConditions(this.cond, params, 'and')
 				sql += ' where ' + conds
 			}
-			sql += ';'
+			break
+		case 'insert':
+			sql += ` into ${this.tname} (${this.fields.join(',')}) values ?`
+			params = this.values
 			break
 		default:
 			return cb('coming soon')
 		}
+		sql += ';'
 		return cb(err, sql, params)
 	},
 	exec(cb){

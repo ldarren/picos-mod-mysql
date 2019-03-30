@@ -68,6 +68,24 @@ test('test select query builder where in', cb => {
 			params[2] === 56)
 	})
 })
+
+test('test insert query builder', cb => {
+	client.q()
+	.insert(['firstname', 'lastname'])
+	.into('user')
+	.values([['foo', 'bar'], ['hello', 'world']])
+	.toSQL((err, sql, params) => {
+console.log('>>>', err, sql, params)
+		if (err) return cb(err)
+		cb(null, 
+			'insert into user (firstname,lastname) values ?;' === sql && 
+			params.length === 2 &&
+			params[0][0] === 'foo' && 
+			params[0][1] === 'bar' && 
+			params[1][0] === 'hello' && 
+			params[1][1] === 'world')
+	})
+})
 /*
 test('test select query', cb => {
 	client.q().select().from('user').where({id: 3, state: 1}).exec((err, result) => {
