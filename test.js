@@ -75,22 +75,35 @@ test('test insert query builder', cb => {
 		.into('user')
 		.values([['foo', 'bar'], ['hello', 'world']])
 		.toSQL((err, sql, params) => {
-			console.log('>>>', err, sql, params)
 			if (err) return cb(err)
+			const p0 = params[0]
 			cb(null,
 				'insert into user (firstname,lastname) values ?;' === sql &&
-			params.length === 2 &&
-			params[0][0] === 'foo' &&
-			params[0][1] === 'bar' &&
-			params[1][0] === 'hello' &&
-			params[1][1] === 'world')
+			p0.length === 2 &&
+			p0[0][0] === 'foo' &&
+			p0[0][1] === 'bar' &&
+			p0[1][0] === 'hello' &&
+			p0[1][1] === 'world')
 		})
 })
-/*
-test('test select query', cb => {
-	client.q().select().from('user').where({id: 3, state: 1}).exec((err, result) => {
-		if (err) return cb(err)
-		cb(null, true)
-	})
+
+test('test insert query exec', cb => {
+	client.q()
+		.insert(['v'])
+		.into('hash')
+		.values([['ClientId'], ['UserPoolId']])
+		.exec((err, reply) => {
+			if (err) return cb(err)
+			cb(null, reply.affectedRows === 2)
+		})
 })
-*/
+
+test('test select query exec', cb => {
+	client.q()
+		.select('k', 'v')
+		.from('hash')
+		.exec((err, reply) => {
+			if (err) return cb(err)
+			cb(null, reply.length === 2)
+		})
+})
