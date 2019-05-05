@@ -1,27 +1,10 @@
-function extractConditions(conds, params, joint){
-	let str = ''
-	if (!conds.length) return str
-	const cond = conds.shift()
-	if (cond.charAt) return ' ' + cond + ' ' + extractConditions(conds, params, cond)
-	if (Array.isArray(cond[0])) return '(' + extractConditions(cond, params, 'and') + ')'
-	if (conds[0] && !conds[0].charAt) conds.unshift(joint)
-
-	str += cond[0] + ' ' + cond[1] + ' '
-	if (Array.isArray(cond[2])){
-		params.push(cond[2])
-		str += '(?)'
-	} else {
-		str += '?'
-		params.push(cond[2])
-	}
-
-	return str + extractConditions(conds, params, joint)
-}
+const utils = require('./utils')
 
 function QueryBuilder(cluster, tname, pname){
 	this.cluster = cluster
 	this.tname = tname
 	this.pname = pname
+	this.op = 'select'
 	this.cond = []
 }
 
@@ -41,14 +24,18 @@ QueryBuilder.prototype = {
 		}else{
 			this.ret = ['*']
 		}
-
 		return this
 	},
 	insert(fields){
 		this.op = 'insert'
 		if (!this.pname) this.pname = 'master'
 
-		this.fields = fields
+		if (Array.isArray(fields)){
+			this.fields = fields
+		}else{
+			this.fields = Object.keys(fields)
+			this.values = this.fields.map(k => fields[k])
+		}
 		return this
 	},
 	update(){
@@ -105,7 +92,17 @@ QueryBuilder.prototype = {
 		return this
 	},
 	values(data){
-		this.values = data
+		if (this.fields && Array.isArray(data) && !Array.isArray(data[0]) && data[0] instanceof Object){
+			this.values = data.map(d => {
+				return this.fields.map(k => {
+					const v = d[k]
+					if (v == null) return null
+					return v
+				})
+			})
+		}else{
+			this.values = data
+		}
 		return this
 	},
 	validate(){
@@ -140,7 +137,7 @@ QueryBuilder.prototype = {
 			sql += ' ' + this.ret.join(',')
 			if (this.tname) sql += ' from ' + this.tname
 			if (this.cond.length){
-				conds = extractConditions(this.cond, params, 'and')
+				conds = utils.extractConditions(null, this.cond, params, 'and')
 				sql += ' where ' + conds
 			}
 			break
@@ -149,7 +146,7 @@ QueryBuilder.prototype = {
 			params.push(this.values)
 			break
 		default:
-			return cb('coming soon')
+			return cb('operation not found: '+this.op)
 		}
 		sql += ';'
 		return cb(err, sql, params)
