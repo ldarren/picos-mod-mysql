@@ -1,27 +1,16 @@
-function extractConditions(index, conds, params, joint){
-	let str = ''
-	if (!conds.length) return str
-	const c = conds.shift()
-	// [and, or], generated of the system no escape needed
-	if (c.charAt) return ' ' + c + ' ' + extractConditions(index, conds, params, c)
-	// added an "or" or "and" if no adjunction
-	if (conds[0] && !conds[0].charAt) conds.unshift(joint)
-	if (Array.isArray(c[0])) return '(' + extractConditions(index, c, params, 'and') + ')'
-
-	if (index && !index.includes(c[0])) return extractConditions(index, conds, params, joint)
-	str += c[0] + ' ' + c[1] + ' '
-	params.push(c[2])
-	if (Array.isArray(c[2])){
-		str += '(?)'
-	} else {
-		str += '?'
-	}
-
-	return str + extractConditions(index, conds, params, joint)
-}
+const validChar = new RegExp('^[a-zA-Z_$][a-zA-Z0-9_$]*$')
 
 module.exports = {
-	extractConditions,
+	join(arr){
+		return arr.map(r => {
+			if (validChar.test(r)) {
+				return '`'+r+'`'
+			}else{
+				return r
+			}
+		}).join(',')
+	},
+
 	decode(obj,hash,ENUM){
 		const keys=Object.keys(obj)
 		for(let i=0,k; (k=keys[i]); i++) {

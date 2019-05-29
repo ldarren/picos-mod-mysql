@@ -7,9 +7,9 @@ function keyValues(arr, key, value){
 	}, {})
 }
 
-function Hash(client, name, k = 'k', v = 'v'){
-	this.KEYS = {}
-	this.VALS = {}
+function Hash(client, name, {k = 'k', v = 'v', keys, vals}){
+	this.KEYS = keys
+	this.VALS = vals
 	this.ready = new Ready
 	client.read('SELECT ??, ?? FROM ?? WHERE state = 1', [k, v, name], (err, result) => {
 		if (err) return console.error(err)

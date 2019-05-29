@@ -1,23 +1,8 @@
 const mysql = require('mysql')
 const args= require('pico-args')
-const QueryBuilder = require('./QueryBuilder')
-const Transposer = require('./Transposer')
-const Hash = require('./Hash')
-
-function listen(key, pool){
-	pool.acquire = conn => {
-		console.log(key, 'acquired', conn.threadId)
-	}
-	pool.connection = conn => {
-		console.log(key, 'connected', conn.threadId)
-	}
-	pool.enqueue = () => {
-		console.log(key, 'enqueueing')
-	}
-	pool.release = conn => {
-		console.log(key, 'released', conn.threadId)
-	}
-}
+const QueryBuilder = require('./src/QueryBuilder')
+const Transposer = require('./src/Transposer')
+const Hash = require('./src/Hash')
 
 function onRemove(nodeId){
 	console.log('REMOVED NODE : ' + nodeId)
@@ -25,11 +10,9 @@ function onRemove(nodeId){
 
 function Client(clusterCfg, poolCfgs){
 	const cluster = mysql.createPoolCluster(clusterCfg)
-	Object.keys(poolCfgs).reduce((acc, k) => {
-		acc.add(k, poolCfgs[k])
-		listen(k, acc.of(k))
-		return acc
-	}, cluster)
+	for (let key in poolCfgs){
+		cluster.add(key, poolCfgs[key])
+	}
 	cluster.on('remove', onRemove)
 
 	this.cluster = cluster
@@ -52,19 +35,18 @@ Client.prototype = {
 	q(){
 		return new QueryBuilder(this.cluster, ...arguments)
 	},
-	hash(name, key, value){
-		name = name || 'hash'
+	hash(name = 'hash', opt = {}){
 		let h = this.hashes[name]
 		if (!h){
-			h = new Hash(this, name, key, value)
+			h = new Hash(this, name, opt)
 			this.hashes[name] = h
 		}
 
 		return h
 	},
-	t(name, hash, index){
+	t(name, hash, index, attr){
 		return (pname = '*') => {
-			return new Transposer(this.cluster.of(pname), hash, name, index)
+			return new Transposer(this.cluster.of(pname), hash, name, index, attr)
 		}
 	}
 }

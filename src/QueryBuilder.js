@@ -1,4 +1,26 @@
-const utils = require('./utils')
+const util = require('./util')
+
+function extractConditions(index, conds, params, joint){
+	let str = ''
+	if (!conds.length) return str
+	const c = conds.shift()
+	// [and, or], generated of the system no escape needed
+	if (c.charAt) return ' ' + c + ' ' + extractConditions(index, conds, params, c)
+	// added an "or" or "and" if no adjunction
+	if (conds[0] && !conds[0].charAt) conds.unshift(joint)
+	if (Array.isArray(c[0])) return '(' + extractConditions(index, c, params, 'and') + ')'
+
+	if (index && !index.includes(c[0])) return extractConditions(index, conds, params, joint)
+	str += `\`${c[0]}\` ${c[1]} `
+	params.push(c[2])
+	if (Array.isArray(c[2])){
+		str += '(?)'
+	} else {
+		str += '?'
+	}
+
+	return str + extractConditions(index, conds, params, joint)
+}
 
 function QueryBuilder(cluster, tname, pname){
 	this.cluster = cluster
@@ -38,15 +60,17 @@ QueryBuilder.prototype = {
 		}
 		return this
 	},
-	update(){
+	update(set){
 		this.op = 'update'
 		if (!this.pname) this.pname = 'master'
+		this.set = set
 
 		return this
 	},
 	delete(){
 		this.op = 'delete'
 		if (!this.pname) this.pname = 'master'
+		this.where(...arguments)
 
 		return this
 	},
@@ -116,7 +140,7 @@ QueryBuilder.prototype = {
 			if (!this.tname || !this.fields || !this.values) return 'missing table name or fields or values'
 			return
 		case 'update':
-			if (!this.tname) return 'missing table name'
+			if (!this.tname || !this.set || !(this.set instanceof Object) || Array.isArray(this.set)) return 'missing table name or set'
 			return
 		case 'delete':
 			if (!this.tname) return 'missing table name'
@@ -134,19 +158,26 @@ QueryBuilder.prototype = {
 		let sql = this.op
 		switch(this.op){
 		case 'select':
-			sql += ' ' + this.ret.join(',')
-			if (this.tname) sql += ' from ' + this.tname
-			if (this.cond.length){
-				conds = utils.extractConditions(null, this.cond, params, 'and')
-				sql += ' where ' + conds
-			}
+			sql += ' ' + util.join(this.ret)
+			if (this.tname) sql += ` from \`${this.tname}\``
 			break
 		case 'insert':
-			sql += ` into ${this.tname} (${this.fields.join(',')}) values ?`
+			sql += ` into \`${this.tname}\` (${util.join(this.fields)}) values ?`
 			params.push(this.values)
+			break
+		case 'update':
+			sql += ` \`${this.tname}\` set ?`
+			params.push(this.set)
+			break
+		case 'delete':
+			sql += ` from \`${this.tname}\``
 			break
 		default:
 			return cb('operation not found: '+this.op)
+		}
+		if (this.cond.length){
+			conds = extractConditions(null, this.cond, params, 'and')
+			sql += ' where ' + conds
 		}
 		sql += ';'
 		return cb(err, sql, params)

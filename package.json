@@ -1,10 +1,10 @@
 {
   "name": "picos-mod-mysql",
-  "version": "0.3.5",
+  "version": "0.5.1",
   "description": "mysql module for picos",
   "main": "index.js",
   "scripts": {
-    "test": "node test.js",
+    "test": "node test/index.js",
 	"lint": "eslint .",
 	"lint:fix": "eslint . --fix"
   },
