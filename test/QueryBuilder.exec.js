@@ -3,7 +3,7 @@ const { series } = pico.export('pico/test')
 
 
 module.exports = client => {
-	series('QueryBuilder exec', function(){
+	series('# QueryBuilder Exec Tests', function(){
 
 		this.test('test delete all', cb => {
 			client.q('user_test')

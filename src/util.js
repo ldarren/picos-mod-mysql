@@ -1,6 +1,7 @@
 const validChar = new RegExp('^[a-zA-Z_$][a-zA-Z0-9_$]*$')
 
 module.exports = {
+	debug: process.env.DEBUG ? console.log : () => {},
 	join(arr){
 		return arr.map(r => {
 			if (validChar.test(r)) {

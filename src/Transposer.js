@@ -1,5 +1,6 @@
 const QueryBuilder = require('./QueryBuilder')
 const Ready = require('./Ready')
+const util = require('./util')
 
 const validcmp = ['=', '<', '>', '=<', '>=', '<>', '!=', 'in', 'not in', 'like']
 
@@ -132,8 +133,9 @@ function makeFilter(index, attr, type, conds, i, join, hash, params){
 	return ' ' + c + ' ' + makeFilter(index, attr, type, conds, i, c, hash, params)
 }
 
-function makeSource(name, index, attr, type, params){
-	if (!type || (type & 1 && type & 2)){
+function makeSource(name, index, attr, retType, condType, params){
+	const type = retType | condType
+	if (!retType || !condType || (type & 1 && type & 2)){
 		params.push(name, name + '_map')
 		return '?? h left join ?? m on m.host_id = h.id'
 	}
@@ -310,7 +312,7 @@ Transposer.prototype = Object.assign({}, QueryBuilder.prototype, {
 			sql = 'select '
 			sql += makeReturn(this.index, this.attr, this.ret, retType, condType)
 			sql += ' from '
-			sql += makeSource(this.name, this.index, this.attr, retType | condType, params)
+			sql += makeSource(this.name, this.index, this.attr, retType, condType, params)
 			if (condType){
 				sql += ' where '
 				sql += makeFilter(this.index, this.attr, retType | condType, this.cond, 0, 'and', this.hash, params)
@@ -386,8 +388,8 @@ Transposer.prototype = Object.assign({}, QueryBuilder.prototype, {
 	},
 	exec(cb){
 		this.toSQL((err, sqls, paramss) => {
-			console.log('Transposer sql', sqls)
-			console.log('Transposer param', JSON.stringify(paramss))
+			util.debug('Transposer sql', sqls)
+			util.debug('Transposer param', JSON.stringify(paramss))
 			if (err) return cb(err)
 			
 			exec(this.pool, this.hash, sqls, paramss, 0, {}, [], (err, results) => {

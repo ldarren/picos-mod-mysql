@@ -2,7 +2,7 @@ const pico = require('pico-common/bin/pico-cli')
 const { series } = pico.export('pico/test')
 
 module.exports = client => {
-	series('Transposer exec tests', function(){
+	series('# Transposer Exec Tests', function(){
 		const tuser = client.t('user_test', client.hash(), ['username'])
 
 		this.test('test transposer ready', cb => {

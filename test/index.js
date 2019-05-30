@@ -14,7 +14,7 @@ setup({
 	//fname: 'test_result.json'
 })
 
-series('mysql', function() {
+series('# Mysql Tests', function() {
 	this.test('ensure mysql loaded', cb => {
 		cb(null, !!mysql)
 	})

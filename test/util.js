@@ -3,7 +3,7 @@ const { parallel } = pico.export('pico/test')
 const util = require('../src/util')
 
 module.exports = client => {
-	parallel('util test', function(){
+	parallel('# Util Tests', function(){
 		this.test('valid name should have quote', cb => {
 			cb(null, '`lastname`,`$dollar`,`_underscore`,`caMel`,`a1phan0meric`' ===
 				util.join(['lastname', '$dollar', '_underscore', 'caMel', 'a1phan0meric']))

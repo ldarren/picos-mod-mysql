@@ -2,7 +2,7 @@ const pico = require('pico-common/bin/pico-cli')
 const { parallel } = pico.export('pico/test')
 
 module.exports = client => {
-	parallel('QueryBuilder toSQL test', function(){
+	parallel('# QueryBuilder toSQL Tests', function(){
 		this.test('test basic select', cb => {
 			client.q().select(1, '"hello"').toSQL((err, sql, params) => {
 				if (err) return cb(err)

@@ -24,9 +24,9 @@ const opt = {
 }
 
 module.exports = client => {
-	series('Transposer toSQL test', function(){
+	series('# Transposer toSQL Tests', function(){
 		const tuser = client.t('user_test', client.hash('hash', opt), ['username'])
-		/*
+/*
 		this.test('test transposer delete all', cb => {
 			tuser().delete().toSQL((err, sqls, paramss) => {
 				if (err) return cb(err)
@@ -92,17 +92,17 @@ module.exports = client => {
 			})
 		})
 
-		this.test('test transposer select with index', cb => {
-			tuser().select('email', 'phone', 'username').where({username: 'test2'}).toSQL((err, sqls, paramss) => {
+		this.test('test transposer select all with index', cb => {
+			tuser().where({username: 'test2'}).toSQL((err, sqls, paramss) => {
 				if (err) return cb(err)
 				cb(null,
 					1 === sqls.length &&
 					1 === paramss.length &&
-					'select h.username,m.k,m.v1,m.v2,m.state,h.id from `user_test` h left join `user_test_map` m on m.host_id = h.id where h.`username` = \'test2\' and m.k in (4, 5)' ===
+					'select h.*,m.k,m.v1,m.v2,m.state from `user_test` h left join `user_test_map` m on m.host_id = h.id where h.`username` = \'test2\'' ===
 						client.format(sqls[0], paramss[0]))
 			})
 		})
-		/*
+/*
 		this.test('test transposer delete with id', cb => {
 			tuser().delete({id: 2}).toSQL((err, sqls, paramss) => {
 				if (err) return cb(err)
