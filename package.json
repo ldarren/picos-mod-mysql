@@ -1,6 +1,6 @@
 {
   "name": "picos-mod-mysql",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "mysql module for picos",
   "main": "index.js",
   "scripts": {
