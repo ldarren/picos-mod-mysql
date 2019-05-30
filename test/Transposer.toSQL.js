@@ -66,12 +66,13 @@ module.exports = client => {
 		this.test('test transposer update with index', cb => {
 			tuser().update({email: 'update1@yopmail.com'}).where({username: 'hello'}).toSQL((err, sqls, paramss) => {
 				if (err) return cb(err)
+
 				cb(null,
 					2 === sqls.length &&
 					2 === paramss.length &&
 					3 === paramss[0].length &&
 					4 === paramss[1].length &&
-					'select id from `user_test` where h.`username` = \'hello\'' === client.format(sqls[0], paramss[0]) &&
+					'select id from `user_test` h where h.`username` = \'hello\'' === client.format(sqls[0], paramss[0]) &&
 					'update `user_test_map` set v2 = \'update1@yopmail.com\' where host_id = \'ID0\' and k = 4' === client.format(sqls[1], paramss[1]))
 			})
 		})

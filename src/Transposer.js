@@ -236,7 +236,7 @@ function replaceId(key, ids){
 
 function exec(pool, hash, sqls, paramss, idx, ids, results, cb){
 	if (sqls.length <= idx) return cb(null, results)
-	const params = paramss[idx].map(k => replaceId(k, ids))
+	const params = replaceId(paramss[idx], ids)
 	pool.query(sqls[idx++], params, (err, result) => {
 		if (err) return cb(err, results)
 		if (Array.isArray(result)){

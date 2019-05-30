@@ -22,10 +22,10 @@ series('mysql', function() {
 	this.test('ensure mysql create', cb => {
 		mysql.create(appConfig, libConfig, (err, cli) => {
 			if (err) return cb(err)
-			//require('./util')(cli)
-			//require('./QueryBuilder.toSQL')(cli)
+			require('./util')(cli)
+			require('./QueryBuilder.toSQL')(cli)
 			//require('./QueryBuilder.exec')(cli)
-			//require('./Transposer.toSQL')(cli)
+			require('./Transposer.toSQL')(cli)
 			require('./Transposer.exec')(cli)
 			cb(null, !!cli)
 		})
